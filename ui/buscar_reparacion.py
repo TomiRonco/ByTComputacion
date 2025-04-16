@@ -4,7 +4,7 @@ from datetime import datetime
 
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QLineEdit, QTextEdit, QPushButton,
-    QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox, QComboBox
+    QVBoxLayout, QHBoxLayout, QGroupBox, QMessageBox, QComboBox
 )
 from PyQt5.QtGui import QPixmap, QPalette, QBrush
 from PyQt5.QtCore import Qt
@@ -14,12 +14,8 @@ from utils.pdf_generator import generar_boleta_pdf
 
 
 def get_asset_path(filename):
-    """
-    Devuelve la ruta absoluta al archivo dentro de assets.
-    Compatible con ejecución directa y PyInstaller.
-    """
     try:
-        base_path = sys._MEIPASS  # PyInstaller
+        base_path = sys._MEIPASS
     except AttributeError:
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     return os.path.join(base_path, 'assets', filename)
@@ -30,70 +26,16 @@ class VentanaBuscarReparacion(QWidget):
         super().__init__()
         self.setWindowTitle("Buscar Presupuesto")
         self.setFixedSize(800, 600)
-
         self.set_background_image()
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(20)
 
-        # Grilla búsqueda
-        buscar_grid = QGridLayout()
-        label = QLabel("Ingrese el número de presupuesto:")
-        self.id_input = QLineEdit()
-        self.id_input.setPlaceholderText("Número de presupuesto")
-        self.id_input.setFixedHeight(35)
-
-        self.btn_buscar = QPushButton("Buscar")
-        self.btn_buscar.setStyleSheet("background-color: rgba(100, 100, 100, 200); color: white; border-radius: 5px;")
-        self.btn_buscar.setMinimumHeight(70)
-        self.btn_buscar.setMinimumWidth(150)
-        self.btn_buscar.clicked.connect(self.buscar)
-
-        buscar_grid.addWidget(label,        0, 0)
-        buscar_grid.addWidget(self.id_input,1, 0)
-        buscar_grid.addWidget(self.btn_buscar,0, 1, 2, 1)
-        buscar_grid.setColumnStretch(0, 3)
-        buscar_grid.setColumnStretch(1, 2)
-
-        layout.addLayout(buscar_grid)
-
-        # Info del cliente
-        self.nombre_label = QLabel("Nombre: -")
-        self.telefono_label = QLabel("Teléfono: -")
-        layout.addWidget(self.nombre_label)
-        layout.addWidget(self.telefono_label)
-
-        # Descripción
-        layout.addWidget(QLabel("Descripción:"))
-        self.resultado = QTextEdit()
-        layout.addWidget(self.resultado)
-
-        # Costo
-        layout.addWidget(QLabel("Costo (ARS):"))
-        self.costo_input = QLineEdit()
-        self.costo_input.setPlaceholderText("Costo de la reparación")
-        layout.addWidget(self.costo_input)
-
-        # Estado
-        layout.addWidget(QLabel("Estado:"))
-        self.estado_combo = QComboBox()
-        self.estado_combo.addItems(["Aceptado", "En proceso", "Finalizado", "No aceptado"])
-        layout.addWidget(self.estado_combo)
-
-        # Botones
-        botones_layout = QHBoxLayout()
-        self.btn_guardar = QPushButton("Guardar Cambios")
-        self.btn_guardar.setFixedHeight(40)
-        self.btn_guardar.setStyleSheet("background-color: rgba(80, 80, 150, 200); color: white; border-radius: 5px;")
-        self.btn_guardar.clicked.connect(self.guardar)
-
-        self.btn_reimprimir = QPushButton("Reimprimir Boleta")
-        self.btn_reimprimir.setFixedHeight(40)
-        self.btn_reimprimir.setStyleSheet("background-color: rgba(150, 80, 80, 200); color: white; border-radius: 5px;")
-        self.btn_reimprimir.clicked.connect(self.reimprimir)
-
-        botones_layout.addWidget(self.btn_guardar)
-        botones_layout.addWidget(self.btn_reimprimir)
-        layout.addLayout(botones_layout)
+        layout.addWidget(self.create_busqueda_group())
+        layout.addWidget(self.create_info_group())
+        layout.addWidget(self.create_detalle_group())
+        layout.addLayout(self.create_botones_layout())
 
         self.setLayout(layout)
 
@@ -113,6 +55,178 @@ class VentanaBuscarReparacion(QWidget):
         self.set_background_image()
         super().resizeEvent(event)
 
+    def create_busqueda_group(self):
+        group = QGroupBox("Buscar Presupuesto")
+        group.setStyleSheet("""
+            QGroupBox {
+                background-color: rgba(0, 0, 0, 150);
+                color: white;
+                border-radius: 10px;
+                padding: 10px;
+                font-weight: bold;
+            }
+        """)
+        layout = QVBoxLayout()
+        form_layout = QHBoxLayout()
+
+        label = QLabel("Número de presupuesto:")
+        label.setFixedWidth(150)
+        label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        self.id_input = QLineEdit()
+        self.id_input.setPlaceholderText("Ej: 123")
+        self.id_input.setFixedHeight(35)
+        self.id_input.setFixedWidth(200)
+        self.id_input.setStyleSheet("""
+            QLineEdit {
+                padding: 5px;
+                border-radius: 5px;
+                background-color: rgba(0, 0, 0, 100);
+                color: white;
+                border: 1px solid #888;
+            }
+        """)
+
+        self.btn_buscar = QPushButton("Buscar")
+        self.btn_buscar.setFixedHeight(35)
+        self.btn_buscar.setFixedWidth(100)
+        self.btn_buscar.setStyleSheet(self.get_button_style())
+        self.btn_buscar.clicked.connect(self.buscar)
+
+        form_layout.addWidget(label)
+        form_layout.addWidget(self.id_input)
+        form_layout.addStretch()
+        form_layout.addWidget(self.btn_buscar)
+
+        layout.addLayout(form_layout)
+        group.setLayout(layout)
+        return group
+
+    def create_info_group(self):
+        group = QGroupBox("Información del cliente y estado")
+        group.setStyleSheet("""
+            QGroupBox {
+                background-color: rgba(0, 0, 0, 150);
+                color: white;
+                border-radius: 10px;
+                padding: 10px;
+                font-weight: bold;
+            }
+        """)
+        layout = QHBoxLayout()
+
+        cliente_info = QVBoxLayout()
+        self.nombre_label = QLabel("Nombre: -")
+        self.telefono_label = QLabel("Teléfono: -")
+        cliente_info.addWidget(self.nombre_label)
+        cliente_info.addWidget(self.telefono_label)
+
+        estado_info = QVBoxLayout()
+        self.estado_label = QLabel("Estado actual: -")
+        self.costo_label = QLabel("Presupuesto actual: -")
+        estado_info.addWidget(self.estado_label)
+        estado_info.addWidget(self.costo_label)
+
+        layout.addLayout(cliente_info)
+        layout.addStretch()
+        layout.addLayout(estado_info)
+
+        group.setLayout(layout)
+        return group
+
+    def create_detalle_group(self):
+        group = QGroupBox("Detalle de Reparación")
+        group.setStyleSheet("""
+            QGroupBox {
+                background-color: rgba(0, 0, 0, 150);
+                color: white;
+                border-radius: 10px;
+                padding: 5px;
+                font-weight: bold;
+            }
+        """)
+        layout = QVBoxLayout()
+
+        self.resultado = QTextEdit()
+        self.resultado.setPlaceholderText("Descripción detallada...")
+        self.resultado.setMinimumHeight(100)
+        self.resultado.setStyleSheet("""
+            QTextEdit {
+                background-color: rgba(0, 0, 0, 100);
+                color: white;
+                border-radius: 5px;
+                padding: 5px;
+                border: 1px solid #888;
+            }
+        """)
+
+        self.costo_input = QLineEdit()
+        self.costo_input.setPlaceholderText("Costo en ARS")
+        self.costo_input.setStyleSheet("""
+            QLineEdit {
+                background-color: rgba(0, 0, 0, 100);
+                color: white;
+                border-radius: 5px;
+                padding: 5px;
+                border: 1px solid #888;
+            }
+        """)
+
+        self.estado_combo = QComboBox()
+        self.estado_combo.addItems(["Pendiente", "Aceptado", "En proceso", "Finalizado", "No aceptado"])
+        self.estado_combo.setStyleSheet("""
+            QComboBox {
+                background-color: rgba(0, 0, 0, 100);
+                color: white;
+                border-radius: 5px;
+                padding: 5px;
+                border: 1px solid #888;
+            }
+        """)
+
+        layout.addWidget(QLabel("Descripción:"))
+        layout.addWidget(self.resultado)
+        layout.addWidget(QLabel("Estado:"))
+        layout.addWidget(self.estado_combo)
+        layout.addWidget(QLabel("Costo (ARS):"))
+        layout.addWidget(self.costo_input)
+
+
+        group.setLayout(layout)
+        return group
+
+    def create_botones_layout(self):
+        layout = QHBoxLayout()
+
+        self.btn_guardar = QPushButton("Guardar Cambios")
+        self.btn_guardar.setFixedHeight(40)
+        self.btn_guardar.setStyleSheet(self.get_button_style())
+        self.btn_guardar.clicked.connect(self.guardar)
+
+        self.btn_reimprimir = QPushButton("Reimprimir Boleta")
+        self.btn_reimprimir.setFixedHeight(40)
+        self.btn_reimprimir.setStyleSheet(self.get_button_style())
+        self.btn_reimprimir.clicked.connect(self.reimprimir)
+
+        layout.addWidget(self.btn_guardar)
+        layout.addWidget(self.btn_reimprimir)
+
+        return layout
+
+    def get_button_style(self):
+        return """
+            QPushButton {
+                background-color: rgba(50, 50, 50, 180);
+                color: white;
+                border-radius: 6px;
+                border: 1px solid #999;
+                padding: 8px 16px;
+            }
+            QPushButton:hover {
+                background-color: rgba(90, 90, 90, 220);
+            }
+        """
+
     def buscar(self):
         try:
             id_presupuesto = int(self.id_input.text())
@@ -125,16 +239,25 @@ class VentanaBuscarReparacion(QWidget):
             self.presupuesto_id = resultado[0]
             self.nombre = resultado[1]
             self.telefono = resultado[2]
-            descripcion = resultado[3]
-            estado = resultado[4] or "Aceptado"
-            costo = resultado[5] or ""
+            self.descripcion_actual = resultado[3]
+            estado = resultado[4] if resultado[4] else "Pendiente"
+            costo = resultado[5] or "-"
 
-            self.resultado.setText(descripcion)
+            # Fechas almacenadas desde la base de datos
+            self.fecha_creacion = resultado[6]
+            self.fecha_aceptado = resultado[7]
+            self.fecha_proceso = resultado[8]
+            self.fecha_finalizado = resultado[9]
+
+            self.resultado.setText(self.descripcion_actual)
             self.estado_combo.setCurrentText(estado)
-            self.costo_input.setText(str(costo))
+            self.costo_input.setText("" if costo == "-" else str(costo))
 
             self.nombre_label.setText(f"Nombre: {self.nombre}")
             self.telefono_label.setText(f"Teléfono: {self.telefono}")
+            self.estado_label.setText(f"Estado actual: {estado}")
+            self.costo_label.setText(f"Presupuesto actual: {costo}")
+            self.estado_anterior = estado
         else:
             QMessageBox.information(self, "No encontrado", "No se encontró el presupuesto.")
             self.limpiar_campos()
@@ -144,12 +267,14 @@ class VentanaBuscarReparacion(QWidget):
         self.costo_input.clear()
         self.nombre_label.setText("Nombre: -")
         self.telefono_label.setText("Teléfono: -")
+        self.estado_label.setText("Estado actual: -")
+        self.costo_label.setText("Presupuesto actual: -")
 
     def obtener_fechas_estado(self, estado):
         fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         fechas = {"fecha_aceptado": None, "fecha_proceso": None, "fecha_finalizado": None}
 
-        if estado in ["Aceptado", "No aceptado"]:
+        if estado == "Aceptado":
             fechas["fecha_aceptado"] = fecha_actual
         elif estado == "En proceso":
             fechas["fecha_proceso"] = fecha_actual
@@ -163,25 +288,40 @@ class VentanaBuscarReparacion(QWidget):
             QMessageBox.warning(self, "Error", "Debe buscar un presupuesto primero.")
             return
 
-        descripcion = self.resultado.toPlainText()
-        estado = self.estado_combo.currentText()
-        try:
-            costo = float(self.costo_input.text())
-        except ValueError:
-            QMessageBox.warning(self, "Error", "Costo inválido.")
-            return
+        descripcion = self.resultado.toPlainText().strip()
+        nuevo_estado = self.estado_combo.currentText()
 
-        fechas = self.obtener_fechas_estado(estado)
+        costo_texto = self.costo_input.text().strip()
+        if costo_texto:
+            try:
+                costo = float(costo_texto)
+            except ValueError:
+                QMessageBox.warning(self, "Error", "Costo inválido.")
+                return
+        else:
+            costo = None
+
+        fechas = self.obtener_fechas_estado(nuevo_estado)
+        fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+        if nuevo_estado != getattr(self, "estado_anterior", None):
+            descripcion += f'\n→ Estado cambiado a "{nuevo_estado}" el {fecha_actual}'
+            self.estado_anterior = nuevo_estado
+
+        self.resultado.setText(descripcion)
 
         actualizar_presupuesto(
             self.presupuesto_id,
             descripcion,
-            estado,
+            nuevo_estado,
             costo,
             fechas["fecha_aceptado"],
             fechas["fecha_proceso"],
             fechas["fecha_finalizado"]
         )
+
+        self.estado_label.setText(f"Estado actual: {nuevo_estado}")
+        self.costo_label.setText(f"Presupuesto actual: {costo if costo is not None else '-'}")
 
         QMessageBox.information(self, "Éxito", "Presupuesto actualizado correctamente.")
 
@@ -192,13 +332,24 @@ class VentanaBuscarReparacion(QWidget):
 
         descripcion = self.resultado.toPlainText()
         estado = self.estado_combo.currentText()
-        try:
-            costo = float(self.costo_input.text())
-        except ValueError:
-            QMessageBox.warning(self, "Error", "Costo inválido.")
-            return
 
-        fechas = self.obtener_fechas_estado(estado)
+        costo_texto = self.costo_input.text().strip()
+        if costo_texto:
+            try:
+                costo = float(costo_texto)
+            except ValueError:
+                QMessageBox.warning(self, "Error", "Costo inválido.")
+                return
+        else:
+            costo = None
+
+        # Usar fechas ya guardadas
+        fechas = {
+            "fecha_creacion": self.fecha_creacion,
+            "fecha_aceptado": self.fecha_aceptado,
+            "fecha_proceso": self.fecha_proceso,
+            "fecha_finalizado": self.fecha_finalizado
+        }
 
         generar_boleta_pdf(
             self.presupuesto_id,

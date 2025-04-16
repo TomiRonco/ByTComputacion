@@ -3,6 +3,12 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import os
 import datetime
+import sys
+
+def ruta_recurso(rel_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, rel_path)
+    return os.path.join(os.path.abspath("."), rel_path)
 
 def generar_boleta_pdf(id_presupuesto, nombre, telefono, descripcion, cotizacion=None, estado="Pendiente", fecha_estado=None):
     file_name = f"presupuesto_{id_presupuesto}.pdf"
@@ -11,47 +17,65 @@ def generar_boleta_pdf(id_presupuesto, nombre, telefono, descripcion, cotizacion
     mitad = height / 2
 
     def dibujar_boleta(y_offset, copia):
-        # Encabezado
-        rect_x = 40
-        rect_y = y_offset - 100
-        rect_width = width - 80
-        rect_height = 90
-        c.setStrokeColorRGB(0, 0, 0)
-        c.setFillColorRGB(0.95, 0.95, 0.95)
-        c.rect(rect_x, rect_y, rect_width, rect_height, fill=1)
+        # Logo
+        logo_path = ruta_recurso("assets/BYT.png")
+        logo_width = 80
+        logo_height = 80
+        logo_x = 50
+        logo_y = y_offset - 80
 
-        # Datos del local alineados a la izquierda
-        c.setFont("Helvetica-Bold", 14)
-        c.setFillColorRGB(0, 0, 0)
-        c.drawString(rect_x + 10, rect_y + 60, "ByT Computación")
+        try:
+            logo = ImageReader(logo_path)
+            c.drawImage(logo, logo_x, logo_y, width=logo_width, height=logo_height, mask='auto')
+        except Exception as e:
+            print(f"No se pudo cargar el logo: {e}")
+
+        # Datos del local
+        text_x = logo_x + logo_width + 10
+        text_y = logo_y + logo_height - 5
 
         c.setFont("Helvetica", 10)
-        c.drawString(rect_x + 10, rect_y + 45, "Dirección: Entre Ríos 640")
-        c.drawString(rect_x + 10, rect_y + 31, "Teléfono: 341-4459665")
-        c.drawString(rect_x + 10, rect_y + 17, "Celular:  341-5071726")
-        c.drawString(rect_x + 10, rect_y + 3, "Email: info@bytcomputacion.com.ar")
+        c.drawString(text_x, text_y - 15, "Dirección: Entre Ríos 640")
+        c.drawString(text_x, text_y - 29, "Teléfono: 341-4459665")
+        c.drawString(text_x, text_y - 43, "Celular:  341-5071726")
+        c.drawString(text_x, text_y - 57, "Email: info@bytcomputacion.com.ar")
 
-        # Presupuesto y fecha actual
+        # Fecha de creación del presupuesto
+        fecha_presupuesto = None
+        if fecha_estado and isinstance(fecha_estado, dict):
+            fecha_creacion = fecha_estado.get("fecha_creacion")
+            if fecha_creacion:
+                try:
+                    fecha_presupuesto = datetime.datetime.strptime(fecha_creacion, "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y")
+                except Exception as e:
+                    print(f"Error al parsear fecha_creacion: {e}")
+
+        if not fecha_presupuesto:
+            fecha_presupuesto = datetime.date.today().strftime("%d/%m/%Y")
+
+        # Presupuesto, Fecha, Copia
+        info_x = width - 50
         c.setFont("Helvetica-Bold", 10)
-        c.drawRightString(width - 50, rect_y + 65, f"Presupuesto N°: {id_presupuesto}")
-
-        fecha_actual = datetime.date.today().strftime("%d/%m/%Y")
+        c.drawRightString(info_x, y_offset - 20, f"Presupuesto N°: {id_presupuesto}")
         c.setFont("Helvetica", 10)
-        c.drawRightString(width - 50, rect_y + 50, f"Fecha: {fecha_actual}")
-
+        c.drawRightString(info_x, y_offset - 35, f"Fecha: {fecha_presupuesto}")
         c.setFont("Helvetica-Bold", 10)
-        c.drawRightString(width - 50, rect_y + 35, f"{copia}")
+        c.drawRightString(info_x, y_offset - 50, copia)
 
-        # Datos del cliente y estado
+        # Línea divisoria
+        c.setStrokeColorRGB(0.6, 0.6, 0.6)
+        c.setLineWidth(1)
+        c.line(40, y_offset - 90, width - 40, y_offset - 90)
+
+        # Datos del cliente
         x_left = 50
-        y_datos = y_offset - 130
+        y_datos = y_offset - 110
 
-        # Cliente
         c.setFont("Helvetica", 11)
         c.drawString(x_left, y_datos, f"Cliente: {nombre}")
         c.drawString(x_left, y_datos - 15, f"Celular: {telefono}")
 
-        # Estado y fecha del estado
+        # Estado y su fecha
         estado_str = f"Estado: {estado}"
         fecha_estado_str = ""
 
@@ -65,21 +89,23 @@ def generar_boleta_pdf(id_presupuesto, nombre, telefono, descripcion, cotizacion
                 fecha = fecha_estado.get("fecha_finalizado")
 
             if fecha:
-                fecha_estado_str = datetime.datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y")
-                estado_str += f" - {fecha_estado_str}"
+                try:
+                    fecha_estado_str = datetime.datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y")
+                    estado_str += f" - {fecha_estado_str}"
+                except:
+                    pass
 
-        c.setFont("Helvetica", 11)
         c.drawRightString(width - 50, y_datos, estado_str)
 
-        # Cotización (solo si existe)
+        # Cotización
         if cotizacion is not None:
-            c.setFont("Helvetica", 11)
             cotizacion_str = f"Presupuesto: ${float(cotizacion):,.2f}"
             c.drawRightString(width - 50, y_datos - 15, cotizacion_str)
 
+        c.line(40, y_datos - 30, width - 40, y_datos - 30)
+
         # Descripción
-        c.drawString(x_left, y_offset - 170, "Descripción:")
-        text = c.beginText(x_left, y_offset - 190)
+        text = c.beginText(x_left, y_offset - 155)
         text.setFont("Helvetica", 10)
         for linea in descripcion.splitlines():
             text.textLine(linea)
@@ -112,7 +138,7 @@ def generar_boleta_pdf(id_presupuesto, nombre, telefono, descripcion, cotizacion
             y_line = msg_box_y + msg_box_height - 30 - (i * 12)
             c.drawCentredString(width / 2, y_line, linea)
 
-        # Línea divisoria
+        # Línea de corte
         if copia == "ORIGINAL":
             c.setStrokeColorRGB(0.6, 0.6, 0.6)
             c.setDash(1, 3)
@@ -127,4 +153,4 @@ def generar_boleta_pdf(id_presupuesto, nombre, telefono, descripcion, cotizacion
     dibujar_boleta(mitad, "DUPLICADO")
 
     c.save()
-    os.system(f"open {file_name}")
+    os.startfile(file_name)

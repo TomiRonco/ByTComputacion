@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (
-    QWidget, QLabel, QLineEdit, QComboBox, QCheckBox,
-    QPushButton, QVBoxLayout, QMessageBox, QGroupBox, QStackedLayout
+    QWidget, QLabel, QLineEdit, QCheckBox, QTextEdit,
+    QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox,
+    QGroupBox, QFormLayout, QSizePolicy
 )
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
@@ -22,95 +23,146 @@ class VentanaCargarReparacion(QWidget):
         self.set_background_image("assets/fondo.jpg")
 
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(20, 20, 20, 20)
+        self.main_layout.setContentsMargins(30, 30, 30, 30)
+        self.main_layout.setSpacing(20)
 
-        self.nombre_input = QLineEdit()
-        self.nombre_input.setPlaceholderText("Nombre completo")
-        self.main_layout.addWidget(QLabel("Nombre completo:"))
-        self.main_layout.addWidget(self.nombre_input)
+        # Sección: Datos del Cliente
+        self.seccion_cliente = self.crear_seccion_cliente()
+        self.main_layout.addWidget(self.seccion_cliente)
 
-        self.telefono_input = QLineEdit()
-        self.telefono_input.setPlaceholderText("Teléfono")
-        self.main_layout.addWidget(QLabel("Teléfono:"))
-        self.main_layout.addWidget(self.telefono_input)
+        # Sección: Producto a reparar
+        self.seccion_producto = self.crear_seccion_producto()
+        self.main_layout.addWidget(self.seccion_producto)
 
-        self.producto_combo = QComboBox()
-        self.producto_combo.addItems(["PC Escritorio", "Notebook", "Impresora", "Calculadora", "Celular"])
-        self.producto_combo.currentTextChanged.connect(self.mostrar_opciones_por_producto)
-        self.main_layout.addWidget(QLabel("Producto a reparar:"))
-        self.main_layout.addWidget(self.producto_combo)
+        # Sección: Descripción
+        self.seccion_descripcion = self.crear_seccion_descripcion()
+        self.main_layout.addWidget(self.seccion_descripcion)
 
-        self.marca_label = QLabel("Marca / Modelo:")
-        self.marca_combo = QComboBox()
-        self.main_layout.addWidget(self.marca_label)
-        self.main_layout.addWidget(self.marca_combo)
-
-        self.opciones_stack = QStackedLayout()
-
-        # Grupo Notebook / PC
-        self.notebook_group = QGroupBox("Opciones de Reparación")
-        notebook_layout = QVBoxLayout()
-        self.check_n_pantalla = QCheckBox("Pantalla")
-        self.check_n_pin = QCheckBox("Pin de carga")
-        self.check_n_placa = QCheckBox("Placa")
-        self.check_n_ssd = QCheckBox("Cambio SSD")
-        self.check_n_ram = QCheckBox("Aumento Memoria RAM")
-        self.check_n_act = QCheckBox("Actualización Software")
-        self.check_n_activ = QCheckBox("Activación Software")
-        for chk in [self.check_n_pantalla, self.check_n_pin, self.check_n_placa,
-                    self.check_n_ssd, self.check_n_ram, self.check_n_act, self.check_n_activ]:
-            notebook_layout.addWidget(chk)
-        self.notebook_group.setLayout(notebook_layout)
-        self.opciones_stack.addWidget(self.notebook_group)
-
-        # Impresora
-        self.impresora_group = QGroupBox("Opciones de Impresora")
-        impresora_layout = QVBoxLayout()
-        self.check_i_atasco = QCheckBox("Atasco de papel")
-        self.check_i_limpieza = QCheckBox("Limpieza general")
-        self.check_i_cabezales = QCheckBox("Cabezales")
-        self.check_i_cartuchos = QCheckBox("Cartuchos")
-        for chk in [self.check_i_atasco, self.check_i_limpieza,
-                    self.check_i_cabezales, self.check_i_cartuchos]:
-            impresora_layout.addWidget(chk)
-        self.impresora_group.setLayout(impresora_layout)
-        self.opciones_stack.addWidget(self.impresora_group)
-
-        # Calculadora
-        self.calculadora_group = QGroupBox("Opciones de Calculadora")
-        calculadora_layout = QVBoxLayout()
-        self.check_c_placa = QCheckBox("Placa")
-        self.check_c_mantenimiento = QCheckBox("Mantenimiento general")
-        self.check_c_papel = QCheckBox("Agarre de papel")
-        for chk in [self.check_c_placa, self.check_c_mantenimiento, self.check_c_papel]:
-            calculadora_layout.addWidget(chk)
-        self.calculadora_group.setLayout(calculadora_layout)
-        self.opciones_stack.addWidget(self.calculadora_group)
-
-        # Celular
-        self.celular_group = QGroupBox("Opciones de Celular")
-        celular_layout = QVBoxLayout()
-        self.check_cel_modulo = QCheckBox("Módulo")
-        self.check_cel_pin = QCheckBox("Pin de carga")
-        self.check_cel_placa = QCheckBox("Placa de carga")
-        self.check_cel_bateria = QCheckBox("Batería")
-        for chk in [self.check_cel_modulo, self.check_cel_pin, self.check_cel_placa, self.check_cel_bateria]:
-            celular_layout.addWidget(chk)
-        self.celular_group.setLayout(celular_layout)
-        self.opciones_stack.addWidget(self.celular_group)
-
-        self.main_layout.addLayout(self.opciones_stack)
-        self.opciones_stack.setCurrentIndex(0)
-
+        # Botón
         self.btn_guardar = QPushButton("Guardar y Generar Boleta")
+        self.btn_guardar.setStyleSheet("""
+            QPushButton {
+                background-color: #222;
+                color: white;
+                padding: 10px;
+                font-weight: bold;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #444;
+            }
+        """)
+        self.btn_guardar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_guardar.clicked.connect(self.guardar_reparacion)
         self.main_layout.addWidget(self.btn_guardar)
 
         self.setLayout(self.main_layout)
-        self.mostrar_opciones_por_producto("PC Escritorio")
+
+    from PyQt5.QtCore import Qt
+
+    def crear_seccion_cliente(self):
+        grupo = QGroupBox("Datos del Cliente")
+        grupo.setStyleSheet(self.estilo_grupo())
+
+        layout = QVBoxLayout()
+
+        # Fila Nombre
+        fila_nombre = QHBoxLayout()
+        label_nombre = QLabel("Nombre completo:")
+        label_nombre.setFixedWidth(120)  # Ajustá según necesites
+        label_nombre.setStyleSheet("color: white;")
+        self.nombre_input = QLineEdit()
+        self.nombre_input.setPlaceholderText("Nombre completo")
+        self.nombre_input.setStyleSheet(self.estilo_input())
+        self.nombre_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        fila_nombre.addWidget(label_nombre)
+        fila_nombre.addWidget(self.nombre_input)
+        layout.addLayout(fila_nombre)
+
+        # Fila Teléfono
+        fila_telefono = QHBoxLayout()
+        label_telefono = QLabel("Teléfono:")
+        label_telefono.setFixedWidth(120)
+        label_telefono.setStyleSheet("color: white;")
+        self.telefono_input = QLineEdit()
+        self.telefono_input.setPlaceholderText("Teléfono")
+        self.telefono_input.setStyleSheet(self.estilo_input())
+        self.telefono_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        fila_telefono.addWidget(label_telefono)
+        fila_telefono.addWidget(self.telefono_input)
+        layout.addLayout(fila_telefono)
+
+        grupo.setLayout(layout)
+        return grupo
+
+    def crear_seccion_producto(self):
+        grupo = QGroupBox("Producto a Reparar")
+        layout = QVBoxLayout()
+
+        self.checkboxes_layout = QHBoxLayout()
+        self.productos_checkboxes = []
+        productos = ["PC Escritorio", "Notebook", "Impresora", "Calculadora", "Celular"]
+        for producto in productos:
+            checkbox = QCheckBox(producto)
+            checkbox.setStyleSheet("color: white;")
+            self.checkboxes_layout.addWidget(checkbox)
+            self.productos_checkboxes.append(checkbox)
+        layout.addLayout(self.checkboxes_layout)
+
+        self.marca_input = QLineEdit()
+        self.marca_input.setPlaceholderText("Marca / Modelo")
+        self.marca_input.setStyleSheet(self.estilo_input())
+        label = QLabel("Marca / Modelo:")
+        label.setStyleSheet("color: white;")
+        layout.addWidget(label)
+        layout.addWidget(self.marca_input)
+
+        grupo.setLayout(layout)
+        grupo.setStyleSheet(self.estilo_grupo())
+        return grupo
+
+    def crear_seccion_descripcion(self):
+        grupo = QGroupBox("Descripción del Problema")
+        layout = QVBoxLayout()
+
+        self.descripcion_input = QTextEdit()
+        self.descripcion_input.setPlaceholderText("Describa el problema o tareas a realizar...")
+        self.descripcion_input.setStyleSheet(self.estilo_input())
+        layout.addWidget(self.descripcion_input)
+
+        grupo.setLayout(layout)
+        grupo.setStyleSheet(self.estilo_grupo())
+        return grupo
+
+    def estilo_grupo(self):
+        return """
+        QGroupBox {
+            background-color: rgba(0, 0, 0, 150); /* Fondo negro con transparencia */
+            color: white;
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 10px;
+            font-weight: bold;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 5px;
+        }
+        """
+
+    def estilo_input(self):
+        return """
+        QLineEdit, QTextEdit {
+            background-color: rgba(0, 0, 0, 100);
+            color: white;
+            border: 1px solid #666;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        """
 
     def resource_path(self, relative_path):
-        """Obtiene la ruta absoluta del recurso, compatible con PyInstaller"""
         try:
             base_path = sys._MEIPASS
         except AttributeError:
@@ -126,74 +178,32 @@ class VentanaCargarReparacion(QWidget):
         self.fondo.setPixmap(pixmap)
         self.fondo.lower()
 
-    def mostrar_opciones_por_producto(self, producto):
-        self.marca_combo.clear()
-        self.marca_label.setVisible(True)
-        self.marca_combo.setVisible(True)
-
-        if producto == "PC Escritorio":
-            self.opciones_stack.setCurrentIndex(0)
-            self.marca_label.setVisible(False)
-            self.marca_combo.setVisible(False)
-        elif producto == "Notebook":
-            self.opciones_stack.setCurrentIndex(0)
-            self.marca_combo.addItems(["HP", "Lenovo", "Asus", "Dell", "Acer", "Bangho", "Toshiba", "CX"])
-        elif producto == "Impresora":
-            self.opciones_stack.setCurrentIndex(1)
-            self.marca_combo.addItems(["HP", "Epson", "Brother", "Canon", "Samsung"])
-        elif producto == "Calculadora":
-            self.opciones_stack.setCurrentIndex(2)
-            self.marca_combo.addItems(["Cifra PR-1200", "Cifra PR-26", "Cifra PR-226", "Cifra PR-235", "Cifra PR-255"])
-        elif producto == "Celular":
-            self.opciones_stack.setCurrentIndex(3)
-            self.marca_combo.addItems(["Samsung", "Motorola", "Xiaomi", "iPhone", "Huawei", "Nokia", "LG", "Realme"])
-
     def guardar_reparacion(self):
         nombre = self.nombre_input.text().strip()
         telefono = self.telefono_input.text().strip()
-        producto = self.producto_combo.currentText()
-        marca = self.marca_combo.currentText() if self.marca_combo.isVisible() else "No aplica"
+        descripcion = self.descripcion_input.toPlainText().strip()
 
-        if not nombre or not telefono:
+        productos_seleccionados = [cb.text() for cb in self.productos_checkboxes if cb.isChecked()]
+        if not productos_seleccionados:
+            QMessageBox.warning(self, "Error", "Debe seleccionar al menos un producto.")
+            return
+
+        marca = self.marca_input.text().strip()
+
+        if not nombre or not telefono or not descripcion:
             QMessageBox.warning(self, "Error", "Todos los campos son obligatorios.")
             return
 
-        tareas = []
-        if producto in ["PC Escritorio", "Notebook"]:
-            if self.check_n_pantalla.isChecked(): tareas.append("Pantalla")
-            if self.check_n_pin.isChecked(): tareas.append("Pin de carga")
-            if self.check_n_placa.isChecked(): tareas.append("Placa")
-            if self.check_n_ssd.isChecked(): tareas.append("Cambio SSD")
-            if self.check_n_ram.isChecked(): tareas.append("Aumento RAM")
-            if self.check_n_act.isChecked(): tareas.append("Actualización Software")
-            if self.check_n_activ.isChecked(): tareas.append("Activación Software")
-        elif producto == "Impresora":
-            if self.check_i_atasco.isChecked(): tareas.append("Atasco de papel")
-            if self.check_i_limpieza.isChecked(): tareas.append("Limpieza general")
-            if self.check_i_cabezales.isChecked(): tareas.append("Cabezales")
-            if self.check_i_cartuchos.isChecked(): tareas.append("Cartuchos")
-        elif producto == "Calculadora":
-            if self.check_c_placa.isChecked(): tareas.append("Placa")
-            if self.check_c_mantenimiento.isChecked(): tareas.append("Mantenimiento general")
-            if self.check_c_papel.isChecked(): tareas.append("Agarre de papel")
-        elif producto == "Celular":
-            if self.check_cel_modulo.isChecked(): tareas.append("Módulo")
-            if self.check_cel_pin.isChecked(): tareas.append("Pin de carga")
-            if self.check_cel_placa.isChecked(): tareas.append("Placa de carga")
-            if self.check_cel_bateria.isChecked(): tareas.append("Batería")
+        lineas_descripcion = descripcion.splitlines()
+        descripcion_con_iconos = '\n'.join(f"• {linea}" for linea in lineas_descripcion if linea.strip())
 
-        if not tareas:
-            QMessageBox.warning(self, "Error", "Debe seleccionar al menos una tarea.")
-            return
-
-        descripcion = (
-            f"{producto} - "
-            f"{marca}\n"
-            f"Tareas a realizar: \n - " + "\n- ".join(tareas)
+        descripcion_completa = (
+            f"{', '.join(productos_seleccionados)} {marca}\n"
+            f"Descripción:\n{descripcion_con_iconos}"
         )
 
-        presupuesto_id = guardar_reparacion(nombre, telefono, descripcion)
-        generar_boleta_pdf(presupuesto_id, nombre, telefono, descripcion)
+        presupuesto_id = guardar_reparacion(nombre, telefono, descripcion_completa)
+        generar_boleta_pdf(presupuesto_id, nombre, telefono, descripcion_completa)
 
         QMessageBox.information(self, "Éxito", f"Presupuesto generado N° {presupuesto_id}")
         self.close()
